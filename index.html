@@ -42,6 +42,8 @@
   --grid:#e1e8e6;
   --pipeline:#2f6fd1;
   --pipeline-soft:#dde8fb;
+  --dispatch:#8b5cf6;
+  --dispatch-soft:#ece4fd;
   --cancel:#6b7280;
   --cancel-soft:#e7e9eb;
 }
@@ -126,6 +128,7 @@ nav{padding:14px 10px; flex:1;}
 .pill.warn{background:var(--warn-soft); color:var(--warn);}
 .pill.err{background:var(--err-soft); color:var(--err);}
 .pill.pipeline{background:var(--pipeline-soft); color:var(--pipeline);}
+.pill.dispatch{background:var(--dispatch-soft); color:var(--dispatch);}
 .pill.cancel{background:var(--cancel-soft); color:var(--cancel); text-decoration:line-through; text-decoration-thickness:1.5px;}
 button{font-family:inherit; cursor:pointer;}
 .btn{
@@ -153,10 +156,12 @@ th{
 #prog-table tbody tr.row-cancelled{background:var(--err-soft);}
 #prog-table tbody tr.row-in-production{background:var(--warn-soft);}
 #prog-table tbody tr.row-pipeline{background:var(--pipeline-soft);}
+#prog-table tbody tr.row-for-dispatch{background:var(--dispatch-soft);}
 #prog-table tbody tr.row-completed:hover{background:#c9e6d7;}
 #prog-table tbody tr.row-cancelled:hover{background:#f0c7c0;}
 #prog-table tbody tr.row-in-production:hover{background:#f0dda3;}
 #prog-table tbody tr.row-pipeline:hover{background:#c7d8f5;}
+#prog-table tbody tr.row-for-dispatch:hover{background:#dccbfb;}
 #prog-table tbody tr[class*="row-"] td{background:transparent;}
 #prog-table tbody tr[class*="row-"] select,
 #prog-table tbody tr[class*="row-"] input{background:transparent;}
@@ -271,6 +276,30 @@ tbody tr:hover{background:#fafbfb;}
 input.stock-input{width:66px; text-align:right;}
 .status-badge{font-family:'Barlow Condensed',sans-serif; font-weight:700; letter-spacing:.03em;}
 
+.inv-table .inv-expand-cell{color:var(--ink-soft); font-size:11px; text-align:center; user-select:none;}
+.inv-table tr.inv-row{cursor:pointer;}
+.inv-table tr.inv-row input, .inv-table tr.inv-row button{cursor:auto;}
+.inv-table tr.inv-row:hover{background:#fafbfb;}
+.inv-table tr.inv-row-open{background:#f7f9fa;}
+.inv-product-input{font-weight:600; font-size:13px; width:220px;}
+.inv-category-input{width:150px;}
+.inv-product-sub{font-size:11px; color:var(--ink-soft); margin-top:3px;}
+tr.inv-detail-row td{padding:0; border-bottom:1px solid #eef1f0;}
+.inv-detail-panel{background:#f7f9fa; padding:16px 22px 20px 22px; border-top:1px solid var(--line);}
+.inv-detail-head{display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:14px;}
+.inv-detail-title{font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:19px; letter-spacing:.01em; color:var(--ink);}
+.inv-detail-sub{font-size:11.5px; color:var(--ink-soft); margin-top:2px;}
+.inv-detail-qty-group{display:flex; gap:22px;}
+.inv-detail-qty-item{text-align:right; padding-left:22px; border-left:1px solid var(--line);}
+.inv-detail-qty-item:first-child{padding-left:0; border-left:none;}
+.inv-detail-qty-num{font-size:22px; font-weight:700; color:var(--ink); line-height:1;}
+.inv-detail-qty-label{font-size:10.5px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.08em; margin-top:2px;}
+.inv-detail-history-label{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--ink-soft); margin-bottom:6px;}
+.inv-movement-table{background:var(--panel); border:1px solid var(--line); border-radius:6px; overflow:hidden;}
+.inv-movement-table th{font-size:10.5px;}
+.inv-movement-table td{padding:8px 12px; font-size:12.5px;}
+.inv-movement-table tbody tr:last-child td{border-bottom:none;}
+
 .status-select{font-family:'IBM Plex Mono',monospace;}
 
 /* ---------- progress report toolbar ---------- */
@@ -368,7 +397,7 @@ button, .btn, .nav-item, .chip, .machine-job, .machine-worker, .worker-unassign,
 }
 
 @media print{
-  #sidebar, #topbar, .inv-toolbar, .head-actions, .row-del, #inv-add, #import-csv-btn, #import-csv-input, #import-inv-csv-btn, #import-inv-csv-input, #import-mp-csv-btn, #import-mp-csv-input{display:none !important;}
+  #sidebar, #topbar, .inv-toolbar, .head-actions, .row-del, #inv-add, #import-csv-btn, #import-csv-input, #import-inv-csv-btn, #import-inv-csv-input, #import-mp-csv-btn, #import-mp-csv-input, #import-err-csv-btn, #import-err-csv-input, #import-log-csv-btn, #import-log-csv-input, #import-disp-csv-btn, #import-disp-csv-input, #import-recv-csv-btn, #import-recv-csv-input{display:none !important;}
   #main{margin-left:0 !important;}
   body{background:#fff !important;}
   #content{padding:0 !important;}
@@ -473,20 +502,20 @@ const state = {
     {id:'o8', so:'SO-1008', planNumber:'PL-2607-008', customer:'Coastal Tank Works', item:'304 AB (6.0) 3"x3"x20\'', rawMaterial:'', rawQty:0, plQty:18, actualQty:9, startDate:'2026-07-17', endDate:'2026-07-21', dueDate:'2026-07-22', machineId:'m6', status:'in-production'},
   ],
   inventory:[
-    {sku:'304 AB (3.0) 3/4"x3/4"x20\'', grade:'304', type:'AB', thickness:'3.0', dim1:'3/4"', dim2:'3/4"', dim3:'', length:'20\'', stock:4,  rp:5},
-    {sku:'304 AB (3.0) 1"x1"x20\'', grade:'304', type:'AB', thickness:'3.0', dim1:'1"', dim2:'1"', dim3:'', length:'20\'', stock:60, rp:52},
-    {sku:'304 AB (3.0) 1 1/4"x1 1/4"x20\'', grade:'304', type:'AB', thickness:'3.0', dim1:'1-1/4"', dim2:'1-1/4"', dim3:'', length:'20\'', stock:1, rp:1},
-    {sku:'304 AB (3.0) 1 1/2"x1 1/2"x20\'', grade:'304', type:'AB', thickness:'3.0', dim1:'1-1/2"', dim2:'1-1/2"', dim3:'', length:'20\'', stock:55, rp:40},
-    {sku:'304 AB (3.0) 2"x2"x20\'', grade:'304', type:'AB', thickness:'3.0', dim1:'2"', dim2:'2"', dim3:'', length:'20\'', stock:15, rp:22},
-    {sku:'304 AB (4.0) 1"x1"x20\'', grade:'304', type:'AB', thickness:'4.0', dim1:'1"', dim2:'1"', dim3:'', length:'20\'', stock:20, rp:9},
-    {sku:'304 AB (4.0) 1 1/2"x1 1/2"x20\'', grade:'304', type:'AB', thickness:'4.0', dim1:'1-1/2"', dim2:'1-1/2"', dim3:'', length:'20\'', stock:6, rp:9},
-    {sku:'304 AB (4.0) 2"x2"x20\'', grade:'304', type:'AB', thickness:'4.0', dim1:'2"', dim2:'2"', dim3:'', length:'20\'', stock:110, rp:97},
-    {sku:'304 AB (5.0) 2"x2"x20\'', grade:'304', type:'AB', thickness:'5.0', dim1:'2"', dim2:'2"', dim3:'', length:'20\'', stock:70, rp:76},
-    {sku:'304 AB (6.0) 1"x1"x20\'', grade:'304', type:'AB', thickness:'6.0', dim1:'1"', dim2:'1"', dim3:'', length:'20\'', stock:50, rp:36},
-    {sku:'304 AB (6.0) 1 1/2"x1 1/2"x20\'', grade:'304', type:'AB', thickness:'6.0', dim1:'1-1/2"', dim2:'1-1/2"', dim3:'', length:'20\'', stock:9, rp:9},
-    {sku:'304 AB (6.0) 2"x2"x20\'', grade:'304', type:'AB', thickness:'6.0', dim1:'2"', dim2:'2"', dim3:'', length:'20\'', stock:140, rp:162},
-    {sku:'304 AB (6.0) 2 1/2"x2 1/2"x20\'', grade:'304', type:'AB', thickness:'6.0', dim1:'2-1/2"', dim2:'2-1/2"', dim3:'', length:'20\'', stock:50, rp:43},
-    {sku:'304 AB (6.0) 3"x3"x20\'', grade:'304', type:'AB', thickness:'6.0', dim1:'3"', dim2:'3"', dim3:'', length:'20\'', stock:40, rp:31},
+    {sku:'304 AB (3.0) 3/4"x3/4"x20\'', name:'304 AB (3.0) 3/4"x3/4"x20\'', grade:'304', type:'AB', thickness:'3.0', dim1:'3/4"', dim2:'3/4"', dim3:'', length:'20\'', stock:4,  rp:5},
+    {sku:'304 AB (3.0) 1"x1"x20\'', name:'304 AB (3.0) 1"x1"x20\'', grade:'304', type:'AB', thickness:'3.0', dim1:'1"', dim2:'1"', dim3:'', length:'20\'', stock:60, rp:52},
+    {sku:'304 AB (3.0) 1 1/4"x1 1/4"x20\'', name:'304 AB (3.0) 1 1/4"x1 1/4"x20\'', grade:'304', type:'AB', thickness:'3.0', dim1:'1-1/4"', dim2:'1-1/4"', dim3:'', length:'20\'', stock:1, rp:1},
+    {sku:'304 AB (3.0) 1 1/2"x1 1/2"x20\'', name:'304 AB (3.0) 1 1/2"x1 1/2"x20\'', grade:'304', type:'AB', thickness:'3.0', dim1:'1-1/2"', dim2:'1-1/2"', dim3:'', length:'20\'', stock:55, rp:40},
+    {sku:'304 AB (3.0) 2"x2"x20\'', name:'304 AB (3.0) 2"x2"x20\'', grade:'304', type:'AB', thickness:'3.0', dim1:'2"', dim2:'2"', dim3:'', length:'20\'', stock:15, rp:22},
+    {sku:'304 AB (4.0) 1"x1"x20\'', name:'304 AB (4.0) 1"x1"x20\'', grade:'304', type:'AB', thickness:'4.0', dim1:'1"', dim2:'1"', dim3:'', length:'20\'', stock:20, rp:9},
+    {sku:'304 AB (4.0) 1 1/2"x1 1/2"x20\'', name:'304 AB (4.0) 1 1/2"x1 1/2"x20\'', grade:'304', type:'AB', thickness:'4.0', dim1:'1-1/2"', dim2:'1-1/2"', dim3:'', length:'20\'', stock:6, rp:9},
+    {sku:'304 AB (4.0) 2"x2"x20\'', name:'304 AB (4.0) 2"x2"x20\'', grade:'304', type:'AB', thickness:'4.0', dim1:'2"', dim2:'2"', dim3:'', length:'20\'', stock:110, rp:97},
+    {sku:'304 AB (5.0) 2"x2"x20\'', name:'304 AB (5.0) 2"x2"x20\'', grade:'304', type:'AB', thickness:'5.0', dim1:'2"', dim2:'2"', dim3:'', length:'20\'', stock:70, rp:76},
+    {sku:'304 AB (6.0) 1"x1"x20\'', name:'304 AB (6.0) 1"x1"x20\'', grade:'304', type:'AB', thickness:'6.0', dim1:'1"', dim2:'1"', dim3:'', length:'20\'', stock:50, rp:36},
+    {sku:'304 AB (6.0) 1 1/2"x1 1/2"x20\'', name:'304 AB (6.0) 1 1/2"x1 1/2"x20\'', grade:'304', type:'AB', thickness:'6.0', dim1:'1-1/2"', dim2:'1-1/2"', dim3:'', length:'20\'', stock:9, rp:9},
+    {sku:'304 AB (6.0) 2"x2"x20\'', name:'304 AB (6.0) 2"x2"x20\'', grade:'304', type:'AB', thickness:'6.0', dim1:'2"', dim2:'2"', dim3:'', length:'20\'', stock:140, rp:162},
+    {sku:'304 AB (6.0) 2 1/2"x2 1/2"x20\'', name:'304 AB (6.0) 2 1/2"x2 1/2"x20\'', grade:'304', type:'AB', thickness:'6.0', dim1:'2-1/2"', dim2:'2-1/2"', dim3:'', length:'20\'', stock:50, rp:43},
+    {sku:'304 AB (6.0) 3"x3"x20\'', name:'304 AB (6.0) 3"x3"x20\'', grade:'304', type:'AB', thickness:'6.0', dim1:'3"', dim2:'3"', dim3:'', length:'20\'', stock:40, rp:31},
   ],
   logbook:[
     {id:'l1', machineId:'f1', date:new Date().toISOString().slice(0,10), hours:3.0, note:'SO-1002 run'},
@@ -614,7 +643,9 @@ function pastDueBadge(o){
   if(o.status==='completed') return '<span class="pill ok">On Time</span>';
   return isPastDue(o) ? '<span class="pill err">PAST DUE</span>' : '<span class="pill gray">On Track</span>';
 }
-const STATUS_LABELS = {'not-started':'Not Started','on-hold':'On Hold','pipeline':'Pipeline','in-production':'In Production','completed':'Completed','cancelled':'Cancelled'};
+const STATUS_LABELS = {'not-started':'Not Started','on-hold':'On Hold','pipeline':'Pipeline','in-production':'In Production','for-dispatch':'For Dispatch','completed':'Completed','cancelled':'Cancelled'};
+const SEV_LABELS = {high:'High', medium:'Medium', low:'Low'};
+const sevLabel = s => SEV_LABELS[s] || s;
 function statusFromLabel(label){
   const l = String(label||'').trim().toLowerCase();
   const hit = Object.entries(STATUS_LABELS).find(([k,v])=> v.toLowerCase()===l || k===l);
@@ -626,6 +657,7 @@ function statusPill(status){
     'not-started':['gray','Not Started'],
     'pipeline':['pipeline','Pipeline'],
     'in-production':['warn','In Production'],
+    'for-dispatch':['dispatch','For Dispatch'],
     'completed':['ok','Completed'],
     'on-hold':['warn','On Hold'],
     'cancelled':['err','Cancelled'],
@@ -641,9 +673,13 @@ function findInventoryBySku(sku){
 }
 
 /* Keeps an order's contribution to Inventory stock in sync with its status/actualQty.
-   Adds the produced qty to stock once an order is Completed; if it's later reopened,
-   its actualQty is edited, or its Item/SKU is changed, the difference (or reversal) is
-   applied so a SKU's stock never double-counts or goes stale.
+   Adds the produced qty to stock once an order is Completed OR For Dispatch — both
+   mean the run is physically finished and sitting in inventory, so the goods should
+   count as on-hand stock as soon as either one is set, not just at final Completed.
+   If it's later reopened, its actualQty is edited, or its Item/SKU is changed, the
+   difference (or reversal) is applied so a SKU's stock never double-counts or goes
+   stale. Moving between Completed and For Dispatch is a no-op here (same qty either
+   way) since that hand-off is driven by the linked Dispatch row, not by inventory.
    Returns the SKU string if it couldn't find a matching inventory row (so the caller
    can warn the user), otherwise null. */
 function syncOrderInventory(o, oldItem){
@@ -652,7 +688,7 @@ function syncOrderInventory(o, oldItem){
     if(oldInv) oldInv.stock = (Number(oldInv.stock)||0) - o.inventoryQtyAdded;
     o.inventoryQtyAdded = 0;
   }
-  const shouldHaveAdded = o.status==='completed' ? (Number(o.actualQty)||0) : 0;
+  const shouldHaveAdded = (o.status==='completed' || o.status==='for-dispatch') ? (Number(o.actualQty)||0) : 0;
   const already = Number(o.inventoryQtyAdded)||0;
   const delta = shouldHaveAdded - already;
   if(delta===0) return null;
@@ -684,33 +720,37 @@ function unassignOrder(orderId){
   if(o.status==='in-production') o.status='pipeline';
   render();
 }
+/* Completing an order adds its Actual Qty straight to the finished item's
+   Ready Stock (via syncOrderInventory) and — since Movement History and the
+   In Production count are both derived live from state.orders — that's all
+   it takes for the completed run to show up in the movement ledger and drop
+   out of "In Production". No Dispatch row is auto-created anymore: finished
+   stock goes back into general inventory unreserved, free to be used on any
+   future project rather than being earmarked for the SO that originally
+   triggered the run.
+   If nobody ever typed a number into Actual Qty, it's still sitting at 0 —
+   without this, completing the order would silently add 0 to stock instead
+   of the quantity that was actually planned/run. So on completion, an
+   unset (0 or blank) Actual Qty is assumed to mean "the full planned run
+   was produced" and defaults to Planned Qty. Once Actual Qty is nonzero
+   (whether from this default or the user's own entry), later edits still
+   just reconcile the difference as before. */
 function completeOrder(orderId){
   const o = orderById(orderId);
   if(!o) return;
   o.machineId = null;
   o.status='completed';
+  if(!(Number(o.actualQty)>0)) o.actualQty = Number(o.plQty)||0;
   const warn = syncOrderInventory(o);
-  createDispatchFromOrder(o);
   render();
   if(warn) noInventoryMatchWarning(warn);
 }
-function setOrderStatus(orderId, status){
-  const o = orderById(orderId);
-  if(!o) return;
-  const wasCompleted = o.status==='completed';
-  o.status = status;
-  if(status!=='in-production') o.machineId = null;
-  const warn = syncOrderInventory(o);
-  if(status==='completed') createDispatchFromOrder(o);
-  else if(wasCompleted) removeDispatchForOrder(o);
-  render();
-  if(warn) noInventoryMatchWarning(warn);
-}
-/* Marking an order Completed automatically opens a matching row in the
-   Dispatch menu (Sales Order, Customer, SKU, and produced Qty carried over) so
-   nobody has to re-key it by hand. orderId links the two records so this only
-   ever happens once per order, even if Completed is toggled on and off.
-   Reverting the order off Completed removes that auto-added row again — but
+/* For Dispatch is the hand-off point from Production into Dispatch: setting an
+   order to it opens a matching Pending row in the Dispatch menu (Sales Order,
+   Customer, SKU, and produced Qty carried over) so the warehouse sees exactly
+   what's ready to ship, without re-keying it. orderId links the two records so
+   this only ever happens once per order, even if For Dispatch is toggled on and
+   off. Leaving For Dispatch for any other status removes that row again — but
    only if it's still Pending, so an already-shipped Dispatch entry is never
    silently deleted. */
 function createDispatchFromOrder(o){
@@ -732,6 +772,19 @@ function removeDispatchForOrder(o){
   });
   const removeIds = new Set(stillPending.map(d=>d.id));
   state.dispatches = state.dispatches.filter(d=>!removeIds.has(d.id));
+}
+function setOrderStatus(orderId, status){
+  const o = orderById(orderId);
+  if(!o) return;
+  const wasForDispatch = o.status==='for-dispatch';
+  o.status = status;
+  if(status!=='in-production') o.machineId = null;
+  if((status==='completed' || status==='for-dispatch') && !(Number(o.actualQty)>0)) o.actualQty = Number(o.plQty)||0;
+  const warn = syncOrderInventory(o);
+  if(status==='for-dispatch') createDispatchFromOrder(o);
+  else if(wasForDispatch) removeDispatchForOrder(o);
+  render();
+  if(warn) noInventoryMatchWarning(warn);
 }
 function setOrderMachineFromSelect(orderId, machineId){
   if(machineId===''){ unassignOrder(orderId); return; }
@@ -828,52 +881,80 @@ function renderDashboard(){
 }
 
 /* ================= RENDER: MACHINE ERRORS ================= */
+function addBlankError(){
+  const d = new Date();
+  state.errors.unshift({id:'e'+Date.now(), machine: state.machines[0]? state.machines[0].name : '', desc:'', sev:'medium', time:d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})});
+  render();
+}
 function deleteError(id){
   state.errors = state.errors.filter(e=>e.id!==id);
   render();
+}
+function setErrorField(id, field, value){
+  const e = state.errors.find(e=>e.id===id);
+  if(!e) return;
+  e[field] = value;
+  saveState();
 }
 function renderErrors(){
   $('#content').innerHTML = `
     <div class="panel">
       <div class="panel-head">
         <h2>Machine Errors</h2>
-        <div class="head-actions">${exportMenuHTML('err', 'Export')}</div>
+        <div class="head-actions">
+          <button class="btn primary" id="err-add-btn">+ Add Error</button>
+          <button class="btn" id="import-err-csv-btn">⇧ Import CSV</button>
+          <input type="file" id="import-err-csv-input" accept=".csv,text/csv" style="display:none;">
+          ${exportMenuHTML('err', 'Export')}
+        </div>
       </div>
-      <div class="panel-body">
-        <div id="err-list">
-          ${state.errors.length? state.errors.map(e=>`
-            <div class="err-row">
-              <span class="err-sev ${e.sev}"></span>
-              <div class="err-body">
-                <div class="m">${e.machine}</div>
-                <div class="d">${e.desc}</div>
-              </div>
-              <div class="err-time">${e.time}</div>
-              <button class="row-del" data-del-err="${e.id}" title="Delete error" style="margin-left:8px;">✕</button>
-            </div>`).join('') : '<div class="empty-hint">No open errors.</div>'}
-        </div>
-        <div class="err-form">
-          <select id="err-machine">${state.machines.map(m=>`<option value="${escAttr(m.name)}">${escHtml(m.name)}</option>`).join('')}</select>
-          <select id="err-sev"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select>
-          <input type="text" id="err-desc" placeholder="Describe the issue…">
-          <button class="btn primary" id="err-add">Log Error</button>
-        </div>
+      <div class="panel-body" style="padding:0;">
+        <table>
+          <thead><tr><th>Time</th><th>Machine</th><th>Severity</th><th>Description</th><th></th></tr></thead>
+          <tbody>
+            ${state.errors.length? state.errors.map(e=>`
+              <tr>
+                <td><input class="cell-text mono" style="width:90px;" data-err="${e.id}" data-field="time" value="${escAttr(e.time||'')}"></td>
+                <td>
+                  <select data-err="${e.id}" data-role="err-machine">
+                    ${state.machines.map(m=>`<option value="${escAttr(m.name)}" ${e.machine===m.name?'selected':''}>${escHtml(m.name)}</option>`).join('')}
+                  </select>
+                </td>
+                <td>
+                  <select class="status-select" data-err="${e.id}" data-role="err-sev">
+                    <option value="high" ${e.sev==='high'?'selected':''}>High</option>
+                    <option value="medium" ${e.sev==='medium'?'selected':''}>Medium</option>
+                    <option value="low" ${e.sev==='low'?'selected':''}>Low</option>
+                  </select>
+                </td>
+                <td><input class="cell-text" style="width:320px;" data-err="${e.id}" data-field="desc" value="${escAttr(e.desc||'')}" placeholder="Describe the issue…"></td>
+                <td><button class="row-del" data-del-err="${e.id}" title="Delete error">✕</button></td>
+              </tr>`).join('') : '<tr><td colspan="5"><div class="empty-hint">No open errors.</div></td></tr>'}
+          </tbody>
+        </table>
       </div>
     </div>
   `;
-  $('#err-add').addEventListener('click', ()=>{
-    const machine = $('#err-machine').value;
-    const sev = $('#err-sev').value;
-    const desc = $('#err-desc').value.trim();
-    if(!desc) return;
-    const d = new Date();
-    state.errors.unshift({id:'e'+Date.now(), machine, desc, sev, time:d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})});
-    render();
+  $('#err-add-btn').addEventListener('click', addBlankError);
+  document.querySelectorAll('input[data-err][data-field]').forEach(el=>{
+    el.addEventListener('change', ()=> setErrorField(el.dataset.err, el.dataset.field, el.value));
+  });
+  document.querySelectorAll('select[data-role="err-machine"]').forEach(el=>{
+    el.addEventListener('change', ()=> setErrorField(el.dataset.err, 'machine', el.value));
+  });
+  document.querySelectorAll('select[data-role="err-sev"]').forEach(el=>{
+    el.addEventListener('change', ()=> setErrorField(el.dataset.err, 'sev', el.value));
   });
   document.querySelectorAll('[data-del-err]').forEach(b=>{
     b.addEventListener('click', ()=> deleteError(b.dataset.delErr));
   });
   wireExportMenu('err', exportErrorsCSV, exportErrorsPDF);
+  const errFileInput = $('#import-err-csv-input');
+  $('#import-err-csv-btn').addEventListener('click', ()=> errFileInput.click());
+  errFileInput.addEventListener('change', ()=>{
+    if(errFileInput.files && errFileInput.files[0]) importErrorsCSVFile(errFileInput.files[0]);
+    errFileInput.value = '';
+  });
 }
 
 /* ================= RENDER: LOGBOOK ================= */
@@ -899,6 +980,8 @@ function renderLogbook(){
         <div class="head-actions">
           <span class="pill accent mono">Total: ${totalHrs.toFixed(1)} hr</span>
           <button class="btn primary" id="add-log-btn">+ Add Entry</button>
+          <button class="btn" id="import-log-csv-btn">⇧ Import CSV</button>
+          <input type="file" id="import-log-csv-input" accept=".csv,text/csv" style="display:none;">
           ${exportMenuHTML('log', 'Export')}
         </div>
       </div>
@@ -931,6 +1014,12 @@ function renderLogbook(){
     b.addEventListener('click', ()=> deleteLogEntry(b.dataset.delLog));
   });
   wireExportMenu('log', exportLogbookCSV, exportLogbookPDF);
+  const logFileInput = $('#import-log-csv-input');
+  $('#import-log-csv-btn').addEventListener('click', ()=> logFileInput.click());
+  logFileInput.addEventListener('change', ()=>{
+    if(logFileInput.files && logFileInput.files[0]) importLogbookCSVFile(logFileInput.files[0]);
+    logFileInput.value = '';
+  });
 }
 
 /* ================= RENDER: PROGRESS REPORT ================= */
@@ -960,12 +1049,30 @@ function setOrderField(orderId, field, value){
   if(!o) return;
   const oldItem = field==='item' ? o.item : undefined;
   o[field] = (field==='plQty' || field==='actualQty' || field==='rawQty') ? Number(value) : value;
+  // Auto-complete: once Actual Qty catches up to (or passes) PL Qty, the run
+  // is done — flip the order to Completed and stamp End Date with today
+  // rather than waiting for someone to do it by hand. Skipped for orders
+  // that are already Completed/Cancelled, for a blank PL Qty of 0 (an order
+  // that hasn't been planned yet shouldn't auto-close on a stray edit), and
+  // for For Dispatch orders — those only move to Completed once their linked
+  // Dispatch row actually ships (see syncOrderFromDispatch), not on a qty edit.
+  let autoCompleted = false;
+  if(field==='actualQty' && o.status!=='completed' && o.status!=='cancelled' && o.status!=='for-dispatch' && (Number(o.plQty)||0)>0 && remainingQty(o)<=0){
+    o.status = 'completed';
+    o.machineId = null;
+    o.endDate = todayISO();
+    autoCompleted = true;
+  }
   let warn = null;
   if(field==='actualQty' || field==='item'){
     warn = syncOrderInventory(o, oldItem);
   }
-  refreshOrderRow(orderId);
-  saveState();
+  if(autoCompleted){
+    render(); // status/end-date changed elsewhere on the row (and possibly other panels), so a full re-render is needed rather than the narrow refreshOrderRow patch
+  }else{
+    refreshOrderRow(orderId);
+    saveState();
+  }
   if(warn) noInventoryMatchWarning(warn);
 }
 function refreshOrderRow(orderId){
@@ -1318,39 +1425,259 @@ function exportMapPDF(){
 }
 
 function exportDispatchCSV(){
-  const rows = state.dispatches.map(d=>[d.date||'', d.so||'', d.customer, d.sku, d.qty, d.notes||'', d.status==='completed'?'Completed':'Pending']);
-  downloadCSV('dispatch.csv', ['Date','Sales Order','Customer','Item (SKU)','Qty','Notes','Status'], rows);
+  const rows = state.dispatches.map(d=>[d.date||'', d.so||'', d.customer, d.sku, d.qty, d.notes||'', d.status==='completed'?'Completed':'Pending', d.id]);
+  downloadCSV('dispatch.csv', ['Date','Sales Order','Customer','Item (SKU)','Qty','Notes','Status','Dispatch ID'], rows);
 }
 function exportDispatchPDF(){
   const body = state.dispatches.map(d=>[d.date||'', d.so||'', d.customer, d.sku, String(d.qty), d.notes||'', d.status==='completed'?'Completed':'Pending']);
   pdfTable('Dispatch', ['Date','Sales Order','Customer','Item (SKU)','Qty','Notes','Status'], body, 'dispatch.pdf');
 }
 
+/* ---- CSV import: matches by the hidden Dispatch ID column when present,
+       otherwise by Sales Order + Item (SKU) + Date (normalized). Matches
+       update in place (re-syncing inventory if Completed); unmatched rows are
+       added as new — nothing already in the system gets deleted. ---- */
+function importDispatchCSVFile(file){
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    let added=0, updated=0, skipped=0;
+    try{
+      const rows = parseCSV(String(e.target.result));
+      if(rows.length < 2){ alert('That CSV has no data rows to import.'); return; }
+      const header = rows[0].map(h=>h.trim().toLowerCase());
+      const col = name => header.indexOf(name);
+      const iDate=col('date'), iSO=col('sales order'), iCust=col('customer'), iSKU=col('item (sku)'), iQty=col('qty'),
+            iNotes=col('notes'), iStatus=col('status'), iId=col('dispatch id');
+
+      for(let r=1;r<rows.length;r++){
+        const row = rows[r];
+        if(!row || row.every(c=>String(c).trim()==='')) continue;
+        const date = iDate>-1 ? String(row[iDate]||'').trim() : '';
+        const so = iSO>-1 ? String(row[iSO]||'').trim() : '';
+        const sku = iSKU>-1 ? String(row[iSKU]||'').trim() : '';
+        if(!so && !sku){ skipped++; continue; }
+        const customer = iCust>-1 ? String(row[iCust]||'').trim() : '';
+        const qty = iQty>-1 ? Number(row[iQty]||0) : 0;
+        const notes = iNotes>-1 ? String(row[iNotes]||'').trim() : '';
+        const statusRaw = iStatus>-1 ? String(row[iStatus]||'').trim().toLowerCase() : 'pending';
+        const status = statusRaw==='completed' ? 'completed' : 'pending';
+        const csvId = iId>-1 ? String(row[iId]||'').trim() : '';
+
+        let existing = csvId ? dispatchById(csvId) : null;
+        if(!existing){
+          existing = state.dispatches.find(x=> normText(x.so)===normText(so) && normText(x.sku)===normText(sku) && normText(x.date)===normText(date));
+        }
+        if(existing){
+          const oldSku = existing.sku;
+          Object.assign(existing, {date, so, customer, sku, qty, notes, status});
+          const warn = syncDispatchInventory(existing, oldSku);
+          if(warn) noDispatchInventoryMatchWarning(warn);
+          updated++;
+        } else {
+          const d = {id:'d'+Date.now()+Math.random().toString(36).slice(2,7), date, so, customer, sku, qty, notes, status, inventoryQtyDeducted:0};
+          const warn = syncDispatchInventory(d);
+          state.dispatches.unshift(d);
+          if(warn) noDispatchInventoryMatchWarning(warn);
+          added++;
+        }
+      }
+      render();
+      alert(`Import complete — ${added} added, ${updated} updated${skipped?`, ${skipped} skipped (no SO/SKU)`:''}.`);
+    }catch(err){
+      console.error(err);
+      alert('Could not read that CSV file. Make sure it has Sales Order and Item (SKU) columns (or was exported from this app).');
+    }
+  };
+  reader.readAsText(file);
+}
+
 function exportErrorsCSV(){
-  const rows = state.errors.map(e=>[e.time, e.machine, e.sev, e.desc]);
-  downloadCSV('machine-errors.csv', ['Time','Machine','Severity','Description'], rows);
+  const rows = state.errors.map(e=>[e.time, e.machine, sevLabel(e.sev), e.desc, e.id]);
+  downloadCSV('machine-errors.csv', ['Time','Machine','Severity','Description','Error ID'], rows);
 }
 function exportErrorsPDF(){
-  const body = state.errors.map(e=>[e.time, e.machine, e.sev, e.desc]);
+  const body = state.errors.map(e=>[e.time, e.machine, sevLabel(e.sev), e.desc]);
   pdfTable('Machine Errors', ['Time','Machine','Severity','Description'], body, 'machine-errors.pdf', 'portrait');
 }
 
+/* ---- CSV import: matches existing rows by the hidden Error ID column when
+       present, otherwise by Time + Machine + Description (normalized).
+       Matches are updated in place; unmatched rows are added as new — nothing
+       already in the system is deleted (unlike the Progress Report's master-copy
+       import), so it's safe to import a partial list of errors. ---- */
+function importErrorsCSVFile(file){
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    let added=0, updated=0, skipped=0;
+    try{
+      const rows = parseCSV(String(e.target.result));
+      if(rows.length < 2){ alert('That CSV has no data rows to import.'); return; }
+      const header = rows[0].map(h=>h.trim().toLowerCase());
+      const col = name => header.indexOf(name);
+      const iTime=col('time'), iMachine=col('machine'), iSev=col('severity'), iDesc=col('description'), iId=col('error id');
+      const SEV_BY_LABEL = {high:'high', medium:'medium', low:'low'};
+
+      for(let r=1;r<rows.length;r++){
+        const row = rows[r];
+        if(!row || row.every(c=>String(c).trim()==='')) continue;
+        const time = iTime>-1 ? String(row[iTime]||'').trim() : '';
+        const machine = iMachine>-1 ? String(row[iMachine]||'').trim() : '';
+        const desc = iDesc>-1 ? String(row[iDesc]||'').trim() : '';
+        if(!machine && !desc){ skipped++; continue; }
+        const sevRaw = iSev>-1 ? String(row[iSev]||'').trim().toLowerCase() : '';
+        const sev = SEV_BY_LABEL[sevRaw] || (['high','medium','low'].includes(sevRaw) ? sevRaw : 'medium');
+        const csvId = iId>-1 ? String(row[iId]||'').trim() : '';
+
+        let existing = csvId ? state.errors.find(x=>x.id===csvId) : null;
+        if(!existing){
+          existing = state.errors.find(x=> normText(x.time)===normText(time) && normText(x.machine)===normText(machine) && normText(x.desc)===normText(desc));
+        }
+        const patch = {machine, desc, sev, time};
+        if(existing){
+          Object.assign(existing, patch);
+          updated++;
+        } else {
+          state.errors.unshift(Object.assign({id:'e'+Date.now()+Math.random().toString(36).slice(2,7)}, patch));
+          added++;
+        }
+      }
+      render();
+      alert(`Import complete — ${added} added, ${updated} updated${skipped?`, ${skipped} skipped (no machine/description)`:''}.`);
+    }catch(err){
+      console.error(err);
+      alert('Could not read that CSV file. Make sure it has Machine and Description columns (or was exported from this app).');
+    }
+  };
+  reader.readAsText(file);
+}
+
 function exportLogbookCSV(){
-  const rows = state.logbook.map(l=>[machineName(l.machineId), l.date, l.hours, l.note||'']);
-  downloadCSV('machine-hours-logbook.csv', ['Machine','Date','Hours','Note'], rows);
+  const rows = state.logbook.map(l=>[machineName(l.machineId), l.date, l.hours, l.note||'', l.id]);
+  downloadCSV('machine-hours-logbook.csv', ['Machine','Date','Hours','Note','Entry ID'], rows);
 }
 function exportLogbookPDF(){
   const body = state.logbook.map(l=>[machineName(l.machineId), l.date, String(l.hours), l.note||'']);
   pdfTable('Machine Hours Logbook', ['Machine','Date','Hours','Note'], body, 'machine-hours-logbook.pdf', 'portrait');
 }
 
+/* ---- CSV import: matches by the hidden Entry ID column when present,
+       otherwise by Machine + Date + Note (normalized). Matches update in
+       place; unmatched rows are added as new — nothing already in the system
+       gets deleted. ---- */
+function importLogbookCSVFile(file){
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    let added=0, updated=0, skipped=0;
+    try{
+      const rows = parseCSV(String(e.target.result));
+      if(rows.length < 2){ alert('That CSV has no data rows to import.'); return; }
+      const header = rows[0].map(h=>h.trim().toLowerCase());
+      const col = name => header.indexOf(name);
+      const iMachine=col('machine'), iDate=col('date'), iHours=col('hours'), iNote=col('note'), iId=col('entry id');
+
+      for(let r=1;r<rows.length;r++){
+        const row = rows[r];
+        if(!row || row.every(c=>String(c).trim()==='')) continue;
+        const machineStr = iMachine>-1 ? String(row[iMachine]||'').trim() : '';
+        const date = iDate>-1 ? String(row[iDate]||'').trim() : '';
+        const note = iNote>-1 ? String(row[iNote]||'').trim() : '';
+        if(!machineStr && !date){ skipped++; continue; }
+        const m = state.machines.find(mm=>mm.name.toLowerCase()===machineStr.toLowerCase());
+        const machineId = m ? m.id : (state.machines[0] ? state.machines[0].id : null);
+        const hours = iHours>-1 ? Number(row[iHours]||0) : 0;
+        const csvId = iId>-1 ? String(row[iId]||'').trim() : '';
+
+        let existing = csvId ? state.logbook.find(x=>x.id===csvId) : null;
+        if(!existing){
+          existing = state.logbook.find(x=> normText(machineName(x.machineId))===normText(machineStr) && normText(x.date)===normText(date) && normText(x.note)===normText(note));
+        }
+        const patch = {machineId, date, hours, note};
+        if(existing){
+          Object.assign(existing, patch);
+          updated++;
+        } else {
+          state.logbook.unshift(Object.assign({id:'l'+Date.now()+Math.random().toString(36).slice(2,7)}, patch));
+          added++;
+        }
+      }
+      render();
+      alert(`Import complete — ${added} added, ${updated} updated${skipped?`, ${skipped} skipped (no machine/date)`:''}.`);
+    }catch(err){
+      console.error(err);
+      alert('Could not read that CSV file. Make sure it has Machine and Date columns (or was exported from this app).');
+    }
+  };
+  reader.readAsText(file);
+}
+
 function exportReceivingCSV(){
-  const rows = state.receiving.map(r=>[r.receivingNo, r.date||'', r.po||'', r.supplier, r.sku, r.qty, r.notes||'', r.status==='completed'?'Completed':'Pending']);
-  downloadCSV('receiving.csv', ['Receiving No.','Date','PO / Reference','Supplier','Item (SKU)','Qty','Notes','Status'], rows);
+  const rows = state.receiving.map(r=>[r.receivingNo, r.date||'', r.po||'', r.supplier, r.sku, r.qty, r.notes||'', r.status==='completed'?'Completed':'Pending', r.id]);
+  downloadCSV('receiving.csv', ['Receiving No.','Date','PO / Reference','Supplier','Item (SKU)','Qty','Notes','Status','Receiving ID'], rows);
 }
 function exportReceivingPDF(){
   const body = state.receiving.map(r=>[r.receivingNo, r.date||'', r.po||'', r.supplier, r.sku, String(r.qty), r.notes||'', r.status==='completed'?'Completed':'Pending']);
   pdfTable('Receiving', ['Receiving No.','Date','PO / Reference','Supplier','Item (SKU)','Qty','Notes','Status'], body, 'receiving.pdf');
+}
+
+/* ---- CSV import: matches by the hidden Receiving ID column when present,
+       otherwise by Receiving No. (normalized). Rows with neither are added as
+       new with a fresh auto-generated Receiving No. Matches update in place
+       (re-syncing inventory if Completed); unmatched rows are added — nothing
+       already in the system gets deleted. ---- */
+function importReceivingCSVFile(file){
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    let added=0, updated=0, skipped=0;
+    try{
+      const rows = parseCSV(String(e.target.result));
+      if(rows.length < 2){ alert('That CSV has no data rows to import.'); return; }
+      const header = rows[0].map(h=>h.trim().toLowerCase());
+      const col = name => header.indexOf(name);
+      const iNo=col('receiving no.'), iDate=col('date'), iPO=col('po / reference'), iSupplier=col('supplier'),
+            iSKU=col('item (sku)'), iQty=col('qty'), iNotes=col('notes'), iStatus=col('status'), iId=col('receiving id');
+
+      for(let r=1;r<rows.length;r++){
+        const row = rows[r];
+        if(!row || row.every(c=>String(c).trim()==='')) continue;
+        const receivingNo = iNo>-1 ? String(row[iNo]||'').trim() : '';
+        const sku = iSKU>-1 ? String(row[iSKU]||'').trim() : '';
+        const supplier = iSupplier>-1 ? String(row[iSupplier]||'').trim() : '';
+        if(!receivingNo && !sku){ skipped++; continue; }
+        const date = iDate>-1 ? String(row[iDate]||'').trim() : '';
+        const po = iPO>-1 ? String(row[iPO]||'').trim() : '';
+        const qty = iQty>-1 ? Number(row[iQty]||0) : 0;
+        const notes = iNotes>-1 ? String(row[iNotes]||'').trim() : '';
+        const statusRaw = iStatus>-1 ? String(row[iStatus]||'').trim().toLowerCase() : 'pending';
+        const status = statusRaw==='completed' ? 'completed' : 'pending';
+        const csvId = iId>-1 ? String(row[iId]||'').trim() : '';
+
+        let existing = csvId ? receivingById(csvId) : null;
+        if(!existing && receivingNo){
+          existing = state.receiving.find(x=> normText(x.receivingNo)===normText(receivingNo));
+        }
+        if(existing){
+          const oldSku = existing.sku;
+          Object.assign(existing, {date, po, supplier, sku, qty, notes, status});
+          if(receivingNo) existing.receivingNo = receivingNo;
+          const warn = syncReceivingInventory(existing, oldSku);
+          if(warn) noReceivingInventoryMatchWarning(warn);
+          updated++;
+        } else {
+          const rec = {id:'r'+Date.now()+Math.random().toString(36).slice(2,7), receivingNo: receivingNo || nextReceivingNumber(), date, po, supplier, sku, qty, notes, status, inventoryQtyAdded:0};
+          const warn = syncReceivingInventory(rec);
+          state.receiving.unshift(rec);
+          if(warn) noReceivingInventoryMatchWarning(warn);
+          added++;
+        }
+      }
+      render();
+      alert(`Import complete — ${added} added, ${updated} updated${skipped?`, ${skipped} skipped (no receiving no./SKU)`:''}.`);
+    }catch(err){
+      console.error(err);
+      alert('Could not read that CSV file. Make sure it has a Receiving No. or Item (SKU) column (or was exported from this app).');
+    }
+  };
+  reader.readAsText(file);
 }
 
 let progSearch = '';
@@ -1366,10 +1693,11 @@ let progSortDir = 'asc'; // default: ascending (Pipeline first, finished orders 
 const STATUS_SORT_PRIORITY = {
   'pipeline': 0,
   'in-production': 1,
-  'not-started': 2,
-  'on-hold': 3,
-  'completed': 4,
-  'cancelled': 5,
+  'for-dispatch': 2,
+  'not-started': 3,
+  'on-hold': 4,
+  'completed': 5,
+  'cancelled': 6,
 };
 
 const PROG_SORTERS = {
@@ -1450,6 +1778,7 @@ function renderProgress(){
           <option value="pipeline" ${progStatusFilter==='pipeline'?'selected':''}>Pipeline</option>
           <option value="on-hold" ${progStatusFilter==='on-hold'?'selected':''}>On Hold</option>
           <option value="in-production" ${progStatusFilter==='in-production'?'selected':''}>In Production</option>
+          <option value="for-dispatch" ${progStatusFilter==='for-dispatch'?'selected':''}>For Dispatch</option>
           <option value="completed" ${progStatusFilter==='completed'?'selected':''}>Completed</option>
           <option value="cancelled" ${progStatusFilter==='cancelled'?'selected':''}>Cancelled</option>
         </select>
@@ -1477,7 +1806,7 @@ function renderProgress(){
           </tr></thead>
           <tbody>
             ${orders.length? orders.map(o=>`
-              <tr class="${o.status==='completed'?'row-completed':o.status==='cancelled'?'row-cancelled':o.status==='in-production'?'row-in-production':o.status==='pipeline'?'row-pipeline':''}">
+              <tr class="${o.status==='completed'?'row-completed':o.status==='cancelled'?'row-cancelled':o.status==='in-production'?'row-in-production':o.status==='pipeline'?'row-pipeline':o.status==='for-dispatch'?'row-for-dispatch':''}">
                 <td>
                   <select data-order="${o.id}" data-role="machine">
                     <option value="">— Unassigned —</option>
@@ -1490,6 +1819,7 @@ function renderProgress(){
                     <option value="pipeline" ${o.status==='pipeline'?'selected':''}>Pipeline</option>
                     <option value="on-hold" ${o.status==='on-hold'?'selected':''}>On Hold</option>
                     <option value="in-production" ${o.status==='in-production'?'selected':''}>In Production</option>
+                    <option value="for-dispatch" ${o.status==='for-dispatch'?'selected':''}>For Dispatch</option>
                     <option value="completed" ${o.status==='completed'?'selected':''}>Completed</option>
                     <option value="cancelled" ${o.status==='cancelled'?'selected':''}>Cancelled</option>
                   </select>
@@ -2000,13 +2330,38 @@ function deleteDispatch(id){
   state.dispatches = state.dispatches.filter(d=>d.id!==id);
   render();
 }
+/* Closes the loop back to the Production Report for a Dispatch row that was
+   auto-opened from a For Dispatch order (see createDispatchFromOrder). Once
+   the shipment is actually marked Completed here, the linked order flips to
+   Completed too — the job is now produced AND shipped, not just queued.
+   Reopening the Dispatch back to Pending afterward reverses it, dropping the
+   order back to For Dispatch rather than leaving it stuck on Completed for
+   goods that, as far as this row shows, haven't shipped after all. */
+function syncOrderFromDispatch(d){
+  if(!d.orderId) return null;
+  const o = orderById(d.orderId);
+  if(!o) return null;
+  if(d.status==='completed'){
+    if(o.status==='completed' || o.status==='cancelled') return null;
+    o.status = 'completed';
+    o.machineId = null;
+    if(!o.endDate) o.endDate = d.date || todayISO();
+  }else if(o.status==='completed'){
+    o.status = 'for-dispatch';
+  }else{
+    return null;
+  }
+  return syncOrderInventory(o);
+}
 function setDispatchStatus(id, status){
   const d = dispatchById(id);
   if(!d) return;
   d.status = status;
   const warn = syncDispatchInventory(d);
+  const orderWarn = syncOrderFromDispatch(d);
   render();
   if(warn) noDispatchInventoryMatchWarning(warn);
+  else if(orderWarn) noInventoryMatchWarning(orderWarn);
 }
 function setDispatchField(id, field, value){
   const d = dispatchById(id);
@@ -2045,6 +2400,8 @@ function renderDispatch(){
         <h2>Dispatch</h2>
         <div class="head-actions">
           <button class="btn primary" id="dispatch-add">+ Add Dispatch</button>
+          <button class="btn" id="import-disp-csv-btn">⇧ Import CSV</button>
+          <input type="file" id="import-disp-csv-input" accept=".csv,text/csv" style="display:none;">
           ${exportMenuHTML('disp', 'Export')}
         </div>
       </div>
@@ -2110,6 +2467,12 @@ function renderDispatch(){
     b.addEventListener('click', ()=> deleteDispatch(b.dataset.delDispatch));
   });
   wireExportMenu('disp', exportDispatchCSV, exportDispatchPDF);
+  const dispFileInput = $('#import-disp-csv-input');
+  $('#import-disp-csv-btn').addEventListener('click', ()=> dispFileInput.click());
+  dispFileInput.addEventListener('change', ()=>{
+    if(dispFileInput.files && dispFileInput.files[0]) importDispatchCSVFile(dispFileInput.files[0]);
+    dispFileInput.value = '';
+  });
 }
 
 /* ================= RECEIVING ================= */
@@ -2204,6 +2567,8 @@ function renderReceiving(){
         <h2>Receiving</h2>
         <div class="head-actions">
           <button class="btn primary" id="receiving-add">+ Add Receiving</button>
+          <button class="btn" id="import-recv-csv-btn">⇧ Import CSV</button>
+          <input type="file" id="import-recv-csv-input" accept=".csv,text/csv" style="display:none;">
           ${exportMenuHTML('recv', 'Export')}
         </div>
       </div>
@@ -2272,6 +2637,12 @@ function renderReceiving(){
     b.addEventListener('click', ()=> deleteReceiving(b.dataset.delReceiving));
   });
   wireExportMenu('recv', exportReceivingCSV, exportReceivingPDF);
+  const recvFileInput = $('#import-recv-csv-input');
+  $('#import-recv-csv-btn').addEventListener('click', ()=> recvFileInput.click());
+  recvFileInput.addEventListener('change', ()=>{
+    if(recvFileInput.files && recvFileInput.files[0]) importReceivingCSVFile(recvFileInput.files[0]);
+    recvFileInput.value = '';
+  });
 }
 
 /* ================= RENDER: INVENTORY ================= */
@@ -2279,8 +2650,81 @@ let invFilter = '';
 let invGradeFilter = '';
 let invTypeFilter = '';
 let invStatusFilter = ''; // '' = all, 'reorder' = below reorder point only, 'ok' = above
+let expandedInvIdx = null; // realIdx of the single inventory row currently expanded to show movement history (accordion — only one open at a time)
+
+const CATEGORY_LABELS = {
+  'AB': 'Angle Bar (AB)',
+  'COIL-SLT': 'SS Coil Slitted (COIL-SLT)',
+  'COUPLING': 'Coupling',
+};
+/* Category is driven entirely by the item's "type" field — which is exactly
+   the "Type" column in the Inventory CSV import/export. Known short codes get
+   a friendlier label; anything else (including new types brought in via CSV)
+   is shown as typed. */
+function categoryLabel(type){
+  if(!type) return 'Uncategorized';
+  return CATEGORY_LABELS[type] || type;
+}
+/* Friendly display name for a SKU/name string used elsewhere in the app —
+   resolves to the matching inventory item's Product name when there is one,
+   otherwise falls back to whatever text was passed in (e.g. free-typed raw
+   material names that aren't tracked as their own inventory row). */
+function invDisplayName(text){
+  if(!text) return '—';
+  const inv = findInventoryBySku(text);
+  return inv ? (inv.name || inv.sku) : text;
+}
+/* Movement history for a given SKU. Combines:
+   - completed Receiving (stock in) and completed Dispatch (stock out) records
+   - completed production Orders, which move stock two ways at once:
+     the raw material consumed (stock OUT of the raw material's row, "To" the
+     finished product it became) and the finished product produced (stock IN
+     on the finished item's row, "From" the raw material that was used). */
+function getMovementHistory(sku){
+  const key = (sku||'').trim().toLowerCase();
+  const moves = [];
+  state.receiving.forEach(r=>{
+    if(r.status==='completed' && (r.sku||'').trim().toLowerCase()===key){
+      moves.push({qty:Math.abs(Number(r.qty)||0), date:r.date||'', from:r.supplier||'—', to:'—'});
+    }
+  });
+  state.dispatches.forEach(d=>{
+    if(d.status==='completed' && (d.sku||'').trim().toLowerCase()===key){
+      moves.push({qty:-Math.abs(Number(d.qty)||0), date:d.date||'', from:'—', to:d.customer||'—'});
+    }
+  });
+  state.orders.forEach(o=>{
+    if(o.status!=='completed' && o.status!=='for-dispatch') return;
+    const moveDate = o.endDate || o.dueDate || '';
+    // This SKU was the raw material consumed by the order — stock out, headed to the finished product.
+    if((o.rawMaterial||'').trim().toLowerCase()===key && Number(o.rawQty)>0){
+      moves.push({qty:-Math.abs(Number(o.rawQty)||0), date:moveDate, from:'—', to:invDisplayName(o.item)});
+    }
+    // This SKU was the finished product the order produced — stock in, from the raw material used.
+    if((o.item||'').trim().toLowerCase()===key && Number(o.actualQty)>0){
+      moves.push({qty:Math.abs(Number(o.actualQty)||0), date:moveDate, from:o.rawMaterial? invDisplayName(o.rawMaterial) : '—', to:'—'});
+    }
+  });
+  moves.sort((a,b)=> (b.date||'').localeCompare(a.date||''));
+  return moves;
+}
+/* Quantity breakdown for a given SKU:
+   - In Production: planned qty on orders actively being produced for this item
+   - Reserved: qty on pending dispatches already allocated to a customer for this item
+   Ready Stock is just the item's own "stock" field (on hand, unencumbered). */
+function getQuantityBreakdown(sku){
+  const key = (sku||'').trim().toLowerCase();
+  const inProduction = state.orders
+    .filter(o=> o.status==='in-production' && (o.item||'').trim().toLowerCase()===key)
+    .reduce((sum,o)=> sum + (Number(o.plQty)||0), 0);
+  const reserved = state.dispatches
+    .filter(d=> d.status==='pending' && (d.sku||'').trim().toLowerCase()===key)
+    .reduce((sum,d)=> sum + (Number(d.qty)||0), 0);
+  return {inProduction, reserved};
+}
 function deleteInventoryItem(idx){
   state.inventory.splice(idx, 1);
+  expandedInvIdx = null; // indices shift after a delete, so drop any open detail panel
   render();
 }
 function setInventoryField(idx, field, value){
@@ -2301,9 +2745,9 @@ function refreshInventoryRow(idx){
 }
 
 function exportInventoryCSV(){
-  const header = ['SKU','Grade','Type','Thickness','Dimension 1','Dimension 2','Dimension 3','Length','Current Stock','Reorder Point','Status'];
+  const header = ['SKU','Product','Grade','Type','Thickness','Dimension 1','Dimension 2','Dimension 3','Length','Current Stock','Reorder Point','Status'];
   const rows = state.inventory.map(i=>[
-    i.sku, i.grade, i.type, i.thickness, i.dim1||'', i.dim2||'', i.dim3||'', i.length||'',
+    i.sku, (i.name!==undefined? i.name : i.sku), i.grade, i.type, i.thickness, i.dim1||'', i.dim2||'', i.dim3||'', i.length||'',
     i.stock, i.rp, (i.stock<=i.rp ? 'REORDER' : 'OK')
   ]);
   const esc = v => `"${String(v).replace(/"/g,'""')}"`;
@@ -2317,7 +2761,8 @@ function exportInventoryCSV(){
 }
 
 /* ---- CSV import: matches existing rows by SKU, so re-importing an edited
-       export updates stock/reorder points in place instead of duplicating. ---- */
+       export updates stock/reorder points in place instead of duplicating.
+       "Type" is the column that drives each row's Category. ---- */
 function importInventoryCSVFile(file){
   const reader = new FileReader();
   reader.onload = (e) => {
@@ -2327,9 +2772,9 @@ function importInventoryCSVFile(file){
       if(rows.length < 2){ alert('That CSV has no data rows to import.'); return; }
       const header = rows[0].map(h=>h.trim().toLowerCase());
       const col = name => header.indexOf(name);
-      const iSKU=col('sku'), iGrade=col('grade'), iType=col('type'), iThk=col('thickness'),
+      const iSKU=col('sku'), iName=(col('product')>-1?col('product'):col('name')), iGrade=col('grade'), iType=col('type'), iThk=col('thickness'),
             iD1=col('dimension 1'), iD2=col('dimension 2'), iD3=col('dimension 3'), iLen=col('length'),
-            iStock=col('current stock'), iRP=col('reorder point');
+            iStock=col('current stock')>-1?col('current stock'):col('quantity on hand'), iRP=col('reorder point');
 
       for(let r=1;r<rows.length;r++){
         const row = rows[r];
@@ -2339,6 +2784,7 @@ function importInventoryCSVFile(file){
 
         const existing = state.inventory.find(i=> i.sku===sku);
         const patch = {sku};
+        if(iName>-1) patch.name = row[iName];
         if(iGrade>-1) patch.grade = row[iGrade];
         if(iType>-1) patch.type = row[iType];
         if(iThk>-1) patch.thickness = row[iThk];
@@ -2351,10 +2797,11 @@ function importInventoryCSVFile(file){
 
         if(existing){
           Object.assign(existing, patch);
+          if(existing.name===undefined) existing.name = existing.sku;
           updated++;
         } else {
           state.inventory.unshift(Object.assign(
-            {sku:'', grade:'304', type:'AB', thickness:'', dim1:'', dim2:'', dim3:'', length:'', stock:0, rp:0},
+            {sku:'', name:sku, grade:'304', type:'AB', thickness:'', dim1:'', dim2:'', dim3:'', length:'', stock:0, rp:0},
             patch
           ));
           added++;
@@ -2379,15 +2826,15 @@ function exportInventoryPDF(){
   doc.text(new Date().toLocaleString(), 14, 22);
   doc.autoTable({
     startY: 28,
-    head: [['SKU','Grade','Type','Thk','Dim 1','Dim 2','Dim 3','Length','Stock','Reorder Pt','Status']],
+    head: [['SKU','Product','Grade','Type','Thk','Dim 1','Dim 2','Dim 3','Length','Stock','Reorder Pt','Status']],
     body: state.inventory.map(i=>[
-      i.sku, i.grade, i.type, i.thickness, i.dim1||'', i.dim2||'', i.dim3||'', i.length||'',
+      i.sku, (i.name!==undefined? i.name : i.sku), i.grade, i.type, i.thickness, i.dim1||'', i.dim2||'', i.dim3||'', i.length||'',
       String(i.stock), String(i.rp), (i.stock<=i.rp ? 'REORDER' : 'OK')
     ]),
     styles:{fontSize:7.5, cellPadding:2.5},
     headStyles:{fillColor:[24,34,41]},
     didParseCell: (data)=>{
-      if(data.section==='body' && data.column.index===10 && data.cell.raw==='REORDER'){
+      if(data.section==='body' && data.column.index===11 && data.cell.raw==='REORDER'){
         data.cell.styles.textColor = [178,58,47];
         data.cell.styles.fontStyle = 'bold';
       }
@@ -2400,7 +2847,7 @@ function renderInventory(){
   const grades = [...new Set(state.inventory.map(i=>i.grade).filter(Boolean))].sort();
   const types = [...new Set(state.inventory.map(i=>i.type).filter(Boolean))].sort();
   const rows = state.inventory.filter(i=>{
-    if(invFilter && !i.sku.toLowerCase().includes(invFilter.toLowerCase())) return false;
+    if(invFilter && !`${i.name||''} ${i.sku}`.toLowerCase().includes(invFilter.toLowerCase())) return false;
     if(invGradeFilter && i.grade!==invGradeFilter) return false;
     if(invTypeFilter && i.type!==invTypeFilter) return false;
     const low = i.stock<=i.rp;
@@ -2416,23 +2863,16 @@ function renderInventory(){
           <button class="btn primary" id="inv-add">+ Add SKU</button>
           <button class="btn" id="import-inv-csv-btn">⇧ Import CSV</button>
           <input type="file" id="import-inv-csv-input" accept=".csv,text/csv" style="display:none;">
-          <div class="export-wrap">
-            <button class="btn" id="inv-export-btn">Export ▾</button>
-            <div class="export-menu" id="inv-export-menu">
-              <button id="inv-export-print">🖨 Print</button>
-              <button id="inv-export-csv">⇩ Export as CSV</button>
-              <button id="inv-export-pdf">⇩ Export as PDF</button>
-            </div>
-          </div>
+          ${exportMenuHTML('inv', 'Export')}
         </div>
       </div>
       <div class="panel-body" style="padding:8px 18px 0 18px; font-size:11.5px; color:var(--ink-soft);">
         Edit here, then <strong>Export as CSV</strong> to add SKUs faster in Excel. Re-import with <strong>Import CSV</strong> —
-        rows are matched by SKU, so updates apply in place and nothing gets duplicated. New SKUs also appear as suggestions
-        on the Item field in the Progress Report.
+        rows are matched by SKU, so updates apply in place and nothing gets duplicated. The <strong>Type</strong> column in
+        the CSV is what sets each row's Category. New SKUs also appear as suggestions on the Item field in the Progress Report.
       </div>
       <div class="panel-body" style="padding:10px 18px 0 18px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-        <input type="text" id="inv-search" placeholder="Filter by SKU…" value="${escAttr(invFilter)}" style="width:280px;">
+        <input type="text" id="inv-search" placeholder="Filter by product or SKU…" value="${escAttr(invFilter)}" style="width:280px;">
         <select id="inv-grade-filter" style="min-width:110px;">
           <option value="">All Grades</option>
           ${grades.map(g=>`<option value="${escAttr(g)}" ${invGradeFilter===g?'selected':''}>${escHtml(g)}</option>`).join('')}
@@ -2450,32 +2890,81 @@ function renderInventory(){
         <span style="font-size:11px; color:var(--ink-soft); margin-left:auto;">${rows.length} of ${state.inventory.length} SKUs</span>
       </div>
       <div class="panel-body" data-scroll-preserve style="padding:10px 0 0 0; overflow-x:auto;">
-        <table>
+        <table class="inv-table">
           <thead><tr>
-            <th>SKU</th><th>Grade</th><th>Type</th><th>Thk</th>
-            <th>Dimension 1</th><th>Dimension 2</th><th>Dimension 3</th><th>Length</th>
-            <th>Current Stock</th><th>Reorder Point</th><th>Status</th><th></th>
+            <th style="width:26px;"></th>
+            <th>Product</th>
+            <th>Category</th>
+            <th>SKU</th>
+            <th>Quantity on hand</th>
+            <th>Reorder Point</th>
+            <th>Status</th>
+            <th></th>
           </tr></thead>
           <tbody>
             ${rows.map((i)=>{
               const realIdx = state.inventory.indexOf(i);
               const low = i.stock<=i.rp;
-              return `<tr>
-                <td class="mono" style="font-size:12.5px;">
-                  <input type="text" class="cell-text" style="width:340px; min-width:340px;" data-idx="${realIdx}" data-field="sku" value="${escAttr(i.sku)}">
+              const isOpen = expandedInvIdx===realIdx;
+              const moves = isOpen ? getMovementHistory(i.sku) : [];
+              const qb = isOpen ? getQuantityBreakdown(i.sku) : null;
+              const detailRow = isOpen ? `<tr class="inv-detail-row">
+                <td colspan="8" style="padding:0;">
+                  <div class="inv-detail-panel">
+                    <div class="inv-detail-head">
+                      <div>
+                        <div class="inv-detail-title">${escHtml(i.name||i.sku)}</div>
+                        <div class="inv-detail-sub mono">${escHtml(i.sku)}</div>
+                      </div>
+                      <div class="inv-detail-qty-group">
+                        <div class="inv-detail-qty-item">
+                          <div class="inv-detail-qty-num mono">${escHtml(i.stock)}</div>
+                          <div class="inv-detail-qty-label">Ready Stock</div>
+                        </div>
+                        <div class="inv-detail-qty-item">
+                          <div class="inv-detail-qty-num mono">${escHtml(qb.inProduction)}</div>
+                          <div class="inv-detail-qty-label">In Production</div>
+                        </div>
+                        <div class="inv-detail-qty-item">
+                          <div class="inv-detail-qty-num mono">${escHtml(qb.reserved)}</div>
+                          <div class="inv-detail-qty-label">Reserved</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="inv-detail-history-label">Movement History</div>
+                    <table class="inv-movement-table">
+                      <thead><tr>
+                        <th>Quantity Change</th><th>Movement Date</th><th>From</th><th>To</th>
+                      </tr></thead>
+                      <tbody>
+                        ${moves.length? moves.map(m=>`<tr>
+                          <td><span class="pill ${m.qty>=0?'ok':'err'} mono">${m.qty>=0? '+'+m.qty : m.qty}</span></td>
+                          <td class="mono">${escHtml(m.date||'—')}</td>
+                          <td>${escHtml(m.from)}</td>
+                          <td>${escHtml(m.to)}</td>
+                        </tr>`).join('') : '<tr><td colspan="4"><div class="empty-hint">No completed receiving, dispatch, or production movements for this SKU yet.</div></td></tr>'}
+                      </tbody>
+                    </table>
+                  </div>
                 </td>
-                <td><input type="text" class="cell-text mono" style="width:60px;" data-idx="${realIdx}" data-field="grade" value="${escAttr(i.grade)}"></td>
-                <td><input type="text" class="cell-text mono" style="width:50px;" data-idx="${realIdx}" data-field="type" value="${escAttr(i.type)}"></td>
-                <td><input type="text" class="cell-text mono" style="width:55px;" data-idx="${realIdx}" data-field="thickness" value="${escAttr(i.thickness)}"></td>
-                <td><input type="text" class="cell-text mono" data-idx="${realIdx}" data-field="dim1" value="${escAttr(i.dim1||'')}"></td>
-                <td><input type="text" class="cell-text mono" data-idx="${realIdx}" data-field="dim2" value="${escAttr(i.dim2||'')}"></td>
-                <td><input type="text" class="cell-text mono" data-idx="${realIdx}" data-field="dim3" value="${escAttr(i.dim3||'')}"></td>
-                <td><input type="text" class="cell-text mono" data-idx="${realIdx}" data-field="length" value="${escAttr(i.length||'')}"></td>
+              </tr>` : '';
+              return `<tr class="inv-row${isOpen?' inv-row-open':''}" data-inv-toggle="${realIdx}">
+                <td class="inv-expand-cell" data-inv-toggle="${realIdx}">${isOpen?'▾':'▸'}</td>
+                <td>
+                  <input type="text" class="cell-text inv-product-input" data-idx="${realIdx}" data-field="name" value="${escAttr(i.name!==undefined? i.name : i.sku)}">
+                  <div class="inv-product-sub mono">${escHtml(i.sku)}</div>
+                </td>
+                <td>
+                  <input type="text" class="cell-text inv-category-input" data-idx="${realIdx}" data-field="type" value="${escAttr(i.type||'')}">
+                </td>
+                <td class="mono" style="font-size:12.5px;">
+                  <input type="text" class="cell-text" style="width:280px; min-width:280px;" data-idx="${realIdx}" data-field="sku" value="${escAttr(i.sku)}">
+                </td>
                 <td><input type="number" class="stock-input" data-idx="${realIdx}" data-field="stock" value="${escAttr(i.stock)}"></td>
                 <td><input type="number" class="stock-input" data-idx="${realIdx}" data-field="rp" value="${escAttr(i.rp)}"></td>
                 <td data-invstatus="${realIdx}">${low? '<span class="pill err status-badge">REORDER</span>' : '<span class="pill ok status-badge">OK</span>'}</td>
                 <td><button class="row-del" data-del-inv="${realIdx}" title="Delete item">✕</button></td>
-              </tr>`;
+              </tr>${detailRow}`;
             }).join('')}
           </tbody>
         </table>
@@ -2492,7 +2981,7 @@ function renderInventory(){
     invFilter=''; invGradeFilter=''; invTypeFilter=''; invStatusFilter=''; render();
   });
   $('#inv-add').addEventListener('click', ()=>{
-    state.inventory.unshift({sku:'New SKU', grade:'304', type:'AB', thickness:'', dim1:'', dim2:'', dim3:'', length:'', stock:0, rp:0});
+    state.inventory.unshift({sku:'New SKU', name:'New Product', grade:'304', type:'AB', thickness:'', dim1:'', dim2:'', dim3:'', length:'', stock:0, rp:0});
     render();
   });
   document.querySelectorAll('input[data-idx][data-field]').forEach(el=>{
@@ -2501,16 +2990,16 @@ function renderInventory(){
   document.querySelectorAll('[data-del-inv]').forEach(b=>{
     b.addEventListener('click', ()=> deleteInventoryItem(+b.dataset.delInv));
   });
-
-  const invMenu = $('#inv-export-menu');
-  $('#inv-export-btn').addEventListener('click', e=>{
-    e.stopPropagation();
-    invMenu.classList.toggle('open');
+  document.querySelectorAll('tr.inv-row[data-inv-toggle]').forEach(row=>{
+    row.addEventListener('click', (e)=>{
+      if(e.target.closest('input, button, select, a, label')) return; // let normal editing/clicks through
+      const idx = +row.dataset.invToggle;
+      expandedInvIdx = (expandedInvIdx===idx) ? null : idx;
+      render();
+    });
   });
-  document.addEventListener('click', ()=> invMenu.classList.remove('open'), {once:true});
-  $('#inv-export-print').addEventListener('click', ()=> window.print());
-  $('#inv-export-csv').addEventListener('click', exportInventoryCSV);
-  $('#inv-export-pdf').addEventListener('click', exportInventoryPDF);
+
+  wireExportMenu('inv', exportInventoryCSV, exportInventoryPDF);
 
   const invFileInput = $('#import-inv-csv-input');
   $('#import-inv-csv-btn').addEventListener('click', ()=> invFileInput.click());
@@ -2642,9 +3131,11 @@ function applyLoadedData(saved){
       // migrate older rows that used a single "width" field
       state.inventory = saved.inventory.map(i=>{
         if(i.dim1===undefined){
-          return {sku:i.sku, grade:i.grade, type:i.type, thickness:i.thickness,
+          return {sku:i.sku, name:i.name||i.sku, grade:i.grade, type:i.type, thickness:i.thickness,
             dim1:i.width||'', dim2:i.width||'', dim3:'', length:"20'", stock:i.stock, rp:i.rp};
         }
+        // migrate older rows saved before Product (name) was split out from SKU
+        if(i.name===undefined) return Object.assign({}, i, {name:i.sku});
         return i;
       });
     }
