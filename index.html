@@ -21,6 +21,12 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- Used only for the "Export Template" button (builds an .xlsx with dropdown
+     data validation on the Status / Machine columns) and for reading .xlsx files back in
+     on Import. Both are optional: if offline the first time, CSV import/export still works
+     fine — only the Excel-specific buttons need these to have loaded. -->
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
   --bg:#56c3f5;
@@ -204,6 +210,8 @@ tbody tr:hover{background:#fafbfb;}
 }
 #queue-panel .panel-body{padding:12px;}
 #queue-panel.drag-over, #worker-queue-panel.drag-over{border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft);}
+#dispatch-drop-panel.drag-over{border-color:var(--dispatch); box-shadow:0 0 0 3px var(--dispatch-soft);}
+#dispatch-drop-panel .panel-body{padding:12px;}
 .chip.worker-chip{border-left-color:#2f8fd1;}
 .chip{
   background:#fff; border:1px solid var(--line); border-left:4px solid var(--ink-soft);
@@ -243,6 +251,9 @@ tbody tr:hover{background:#fafbfb;}
   transition:border-color .15s, background .15s;
 }
 .machine.drag-over{border-color:var(--accent); background:var(--accent-soft);}
+.machine.dispatch-tile{border-color:var(--dispatch); background:var(--dispatch-soft);}
+.machine.dispatch-tile.drag-over{border-color:var(--dispatch); background:#dccbfb;}
+.machine.dispatch-tile .machine-name{color:var(--dispatch);}
 .machine.active{border-style:solid; border-color:var(--accent);}
 .machine.has-error{border-color:var(--err); box-shadow:0 0 0 3px var(--err-soft);}
 .machine.staffed{background:var(--bg);}
@@ -479,7 +490,7 @@ const state = {
     // ---- Right line: forming / polishing / finishing (mirrors right half of factory sketch) ----
     {id:'m17', name:'Internal Polishing 1', zone:'right', grp:'Polishing'},
     {id:'m18', name:'Internal Polishing 2', zone:'right', grp:'Polishing'},
-    {id:'m29', name:'Internal Polishing 3', zone:'right', grp:'Polishing'},
+    {id:'m19', name:'Internal Polishing 3', zone:'right', grp:'Polishing'},
     {id:'m20', name:'Hairline Finish Machine', zone:'right', grp:'Polishing'},
     {id:'m21', name:'Satin Finish Machine', zone:'right', grp:'Polishing'},
     {id:'m22', name:'External Polishing 1', zone:'right', grp:'Polishing'},
@@ -489,7 +500,12 @@ const state = {
     {id:'m26', name:'Tri-Roller', zone:'right', grp:'Machines'},
     {id:'m27', name:'For Cleaning', zone:'right', grp:'Finish / IO'},
     {id:'m28', name:'Staging', zone:'right', grp:'Finish / IO'},
-    {id:'m29', name:'For Dispatch', zone:'right', grp:'Finish / IO'},
+    // dispatch:true marks this tile as a shortcut — dropping (or tapping) an
+    // order onto it doesn't "assign" the order to a machine at all. Instead it
+    // behaves exactly like the "Ready for Dispatch" panel in the queue column:
+    // the order's status flips to For Dispatch on the Progress Report, and a
+    // Pending row is opened for it in Dispatch (see setOrderStatus/createDispatchFromOrder).
+    {id:'m29', name:'For Dispatch', zone:'right', grp:'Finish / IO', dispatch:true},
   ],
   orders:[
     {id:'o1', so:'SO-1001', planNumber:'PL-2607-001', customer:'Meridian Fabrication', item:'304 AB (3.0) 1"x1"x20\'', rawMaterial:'', rawQty:0, plQty:40, actualQty:0,  startDate:'2026-07-20', endDate:'2026-07-24', dueDate:'2026-07-25', machineId:null, status:'not-started'},
@@ -702,22 +718,62 @@ function noInventoryMatchWarning(sku){
   alert(`"${sku}" isn't in Inventory yet, so stock wasn't updated. Add that SKU in Inventory, then re-save the Actual Qty (or Status) to sync it.`);
 }
 
+/* Returns the machine tile flagged dispatch:true (see state.machines) — the
+   "For Dispatch" tile is a shortcut, not a real work center, so several
+   functions below need to special-case it. */
+function dispatchMachine(){ return state.machines.find(m=>m.dispatch); }
+
+/* Assigning an order to a machine has one special case: the "For Dispatch"
+   tile. Landing there (via Map drag/tap OR the Machine dropdown in the
+   Progress Report — both call this same function) should leave the Machine
+   column reading "For Dispatch" AND flip Status to For Dispatch, so the two
+   stay in sync and the order shows up as Pending in the Dispatch menu (see
+   createDispatchFromOrder). Any other machine is normal production floor
+   work as before. */
 function assignOrder(orderId, machineId){
   const o = orderById(orderId);
   if(!o) return;
+  const m = machineById(machineId);
+  const wasForDispatch = o.status==='for-dispatch';
   o.machineId = machineId;
-  // Anything reaching the floor (from the Pipeline queue, or via the manual
-  // machine picker in the Progress Report) is now actively being worked.
-  if(o.status==='not-started' || o.status==='pipeline') o.status='in-production';
+
+  if(m && m.dispatch){
+    o.status = 'for-dispatch';
+    if(!(Number(o.actualQty)>0)) o.actualQty = Number(o.plQty)||0;
+    const warn = syncOrderInventory(o);
+    createDispatchFromOrder(o);
+    render();
+    if(warn) noInventoryMatchWarning(warn);
+    return;
+  }
+
+  // Moving off the For Dispatch tile onto a real machine pulls it back into
+  // active production and removes its (still-Pending) Dispatch row.
+  if(o.status==='not-started' || o.status==='pipeline' || wasForDispatch) o.status='in-production';
+  if(wasForDispatch){
+    removeDispatchForOrder(o);
+    const warn = syncOrderInventory(o);
+    render();
+    if(warn) noInventoryMatchWarning(warn);
+    return;
+  }
   render();
 }
 function unassignOrder(orderId){
   const o = orderById(orderId);
   if(!o) return;
+  const wasForDispatch = o.status==='for-dispatch';
   o.machineId = null;
   // Sent back to the Pipeline queue rather than all the way to Not Started,
   // so it's still visible on the Map to be rescheduled.
-  if(o.status==='in-production') o.status='pipeline';
+  if(o.status==='in-production' || wasForDispatch) o.status='pipeline';
+  if(wasForDispatch){
+    removeDispatchForOrder(o);
+    const warn = syncOrderInventory(o);
+    render();
+    if(warn) noInventoryMatchWarning(warn);
+    return;
+  }
   render();
 }
 /* Completing an order adds its Actual Qty straight to the finished item's
@@ -738,9 +794,14 @@ function unassignOrder(orderId){
 function completeOrder(orderId){
   const o = orderById(orderId);
   if(!o) return;
+  const wasForDispatch = o.status==='for-dispatch';
   o.machineId = null;
   o.status='completed';
   if(!(Number(o.actualQty)>0)) o.actualQty = Number(o.plQty)||0;
+  // If this was completed straight from the For Dispatch tile (rather than
+  // by marking its Dispatch row Completed in the Dispatch menu), close out
+  // that now-redundant Pending row too, so it doesn't sit there orphaned.
+  if(wasForDispatch) removeDispatchForOrder(o);
   const warn = syncOrderInventory(o);
   render();
   if(warn) noInventoryMatchWarning(warn);
@@ -778,7 +839,15 @@ function setOrderStatus(orderId, status){
   if(!o) return;
   const wasForDispatch = o.status==='for-dispatch';
   o.status = status;
-  if(status!=='in-production') o.machineId = null;
+  if(status==='for-dispatch'){
+    // Keep Machine and Status in sync: setting Status to For Dispatch here
+    // (rather than by dragging onto the tile) should still show "For
+    // Dispatch" in the Machine column, not blank it out.
+    const dm = dispatchMachine();
+    o.machineId = dm ? dm.id : null;
+  } else if(status!=='in-production'){
+    o.machineId = null;
+  }
   if((status==='completed' || status==='for-dispatch') && !(Number(o.actualQty)>0)) o.actualQty = Number(o.plQty)||0;
   const warn = syncOrderInventory(o);
   if(status==='for-dispatch') createDispatchFromOrder(o);
@@ -1142,15 +1211,45 @@ function parseCSV(text){
   return rows.filter(r => r.length>1 || (r.length===1 && r[0]!==''));
 }
 
+/* Accepts .csv AND .xlsx (e.g. a filled-in copy of the "Download Import
+   Template" file, which has dropdown data validation on Status/Machine —
+   see downloadOrderImportTemplate). Either way it's normalized into the same
+   array-of-rows shape and handed to processOrderImportRows below, so the
+   matching/add/update/remove logic only has to be written once. */
 function importCSVFile(file){
+  const isExcel = /\.xlsx?$/i.test(file.name);
   const reader = new FileReader();
   reader.onload = (e) => {
+    try{
+      let rows;
+      if(isExcel){
+        if(typeof XLSX==='undefined') throw new Error('xlsx-reader-unavailable');
+        const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        rows = XLSX.utils.sheet_to_json(ws, {header:1, raw:false, defval:''})
+          .map(r=>r.map(c=> c==null ? '' : String(c)));
+      } else {
+        rows = parseCSV(String(e.target.result));
+      }
+      processOrderImportRows(rows);
+    }catch(err){
+      console.error(err);
+      if(err && err.message==='xlsx-reader-unavailable'){
+        alert("Couldn't load the Excel reader (needs an internet connection the first time). Reconnect and try again, or save the file as CSV and import that instead.");
+      } else {
+        alert(`Could not read that ${isExcel?'Excel':'CSV'} file. Make sure it was exported from this app (or has matching column headers).`);
+      }
+    }
+  };
+  if(isExcel) reader.readAsArrayBuffer(file); else reader.readAsText(file);
+}
+
+function processOrderImportRows(rows){
     let added=0, updated=0, skipped=0;
     const missingSkus = [];
-    try{
-      const rows = parseCSV(String(e.target.result));
-      if(rows.length < 2){ alert('That CSV has no data rows to import.'); return; }
-      const header = rows[0].map(h=>h.trim().toLowerCase());
+    {
+      if(rows.length < 2){ alert('That file has no data rows to import.'); return; }
+      const header = rows[0].map(h=>String(h).trim().toLowerCase());
       const col = name => header.indexOf(name);
       const iSO=col('sales order'), iPlan=col('plan number'), iCust=col('customer'),
             iItem=col('finished product')>-1 ? col('finished product') : col('item'),
@@ -1286,15 +1385,72 @@ function importCSVFile(file){
       }
 
       render();
-      let msg = `Import complete — ${added} added, ${updated} updated${removed?`, ${removed} removed (not in CSV)`:''}${skipped?`, ${skipped} skipped (no Plan Number / Sales Order / Order ID)`:''}.`;
+      let msg = `Import complete — ${added} added, ${updated} updated${removed?`, ${removed} removed (not in file)`:''}${skipped?`, ${skipped} skipped (no Plan Number / Sales Order / Order ID)`:''}.`;
       if(missingSkus.length) msg += `\n\nStock wasn't updated for these SKUs (not found in Inventory): ${missingSkus.join(', ')}`;
       alert(msg);
-    }catch(err){
-      console.error(err);
-      alert('Could not read that CSV file. Make sure it was exported from this app (or has matching column headers).');
     }
-  };
-  reader.readAsText(file);
+}
+
+/* Builds an .xlsx "Import Template" with the same columns processOrderImportRows
+   reads, plus real Excel dropdown data validation on the Status and Machine
+   columns (pulling live from state.machines, so renaming/adding a machine here
+   automatically shows up next time someone downloads a fresh template). Hand
+   this to whoever fills in orders for you — they pick from the dropdowns
+   instead of typing free text, so it always comes back already formatted the
+   way Import CSV/Excel expects. */
+async function downloadOrderImportTemplate(){
+  if(typeof ExcelJS==='undefined'){
+    alert("Couldn't load the template builder (needs an internet connection the first time). Please reconnect and try again.");
+    return;
+  }
+  try{
+    const wb = new ExcelJS.Workbook();
+    const sheet = wb.addWorksheet('Export Template');
+    const lists = wb.addWorksheet('Lists');
+    lists.state = 'veryHidden';
+
+    const statusOptions = Object.values(STATUS_LABELS);
+    const machineOptions = ['— Unassigned —', ...state.machines.map(m=>m.name)];
+    statusOptions.forEach((s,i)=>{ lists.getCell(i+1,1).value = s; });
+    machineOptions.forEach((m,i)=>{ lists.getCell(i+1,2).value = m; });
+
+    const headers = ['Sales Order','Plan Number','Customer','Raw Material','Qty','Finished Product','PL Qty','Actual Qty','Start Date','End Date','Due Date','Status','Machine','Order ID'];
+    sheet.addRow(headers);
+    const headRow = sheet.getRow(1);
+    headRow.eachCell(c=>{
+      c.font = {bold:true, color:{argb:'FFFFFFFF'}};
+      c.fill = {type:'pattern', pattern:'solid', fgColor:{argb:'FF182229'}};
+    });
+    sheet.views = [{state:'frozen', ySplit:1}];
+    headers.forEach((h,i)=>{ sheet.getColumn(i+1).width = Math.max(14, h.length+4); });
+
+    const statusColLetter = sheet.getColumn(headers.indexOf('Status')+1).letter;
+    const machineColLetter = sheet.getColumn(headers.indexOf('Machine')+1).letter;
+    const ROWS = 300; // dropdown-validated blank rows ready to fill in
+    for(let r=2; r<=ROWS+1; r++){
+      sheet.getCell(`${statusColLetter}${r}`).dataValidation = {
+        type:'list', allowBlank:true, showErrorMessage:true,
+        error:'Pick a value from the dropdown list.', errorTitle:'Invalid Status',
+        formulae:[`Lists!$A$1:$A$${statusOptions.length}`]
+      };
+      sheet.getCell(`${machineColLetter}${r}`).dataValidation = {
+        type:'list', allowBlank:true, showErrorMessage:true,
+        error:'Pick a value from the dropdown list.', errorTitle:'Invalid Machine',
+        formulae:[`Lists!$B$1:$B$${machineOptions.length}`]
+      };
+    }
+
+    const buf = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'production-progress-import-template.xlsx';
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  }catch(err){
+    console.error(err);
+    alert('Could not build the template file. Please try again.');
+  }
 }
 
 function exportPDF(){
@@ -1737,20 +1893,21 @@ function renderProgress(){
         <h2>Production Progress Report</h2>
         <div class="head-actions">
           <button class="btn primary" id="add-order-btn">+ Add</button>
-          <button class="btn" id="import-csv-btn">⇧ Import CSV</button>
-          <input type="file" id="import-csv-input" accept=".csv,text/csv" style="display:none;">
+          <button class="btn" id="import-csv-btn">⇧ Import CSV / Excel</button>
+          <input type="file" id="import-csv-input" accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none;">
           <div class="export-wrap">
             <button class="btn" id="export-btn">Export ▾</button>
             <div class="export-menu" id="export-menu">
               <button id="export-print">🖨 Print</button>
               <button id="export-csv">⇩ Export as CSV</button>
               <button id="export-pdf">⇩ Export as PDF</button>
+              <button id="export-template-btn" title="Download a blank .xlsx with dropdown lists for Status and Machine — fill it in (or hand it to someone else to fill in) then Import it below.">⇩ Export Template</button>
             </div>
           </div>
         </div>
       </div>
       <div class="panel-body" style="padding:8px 18px 0 18px; font-size:11.5px; color:var(--ink-soft);">
-        Edit here, then <strong>Export as CSV</strong> to work on it in Excel — or maintain your own master spreadsheet. <strong>Import CSV</strong> treats the file as the master copy: rows are matched by the hidden Order ID column when present, otherwise by Plan Number + Finished Product + PL Qty + Sales Order (spacing/capitalization differences don't matter). Matching rows are updated in place, rows in the CSV with no match are added as new orders, and — every time — any order currently in the system that isn't matched by a row in the CSV is deleted (including duplicate rows already in the system), so you end up with an exact copy of the file. You'll be asked to confirm before anything is deleted.
+        Edit here, then <strong>Export as CSV</strong> to work on it in Excel — or maintain your own master spreadsheet. <strong>Export Template</strong> downloads a blank .xlsx with the same columns, already set up with dropdown lists (data validation) for the Status and Machine columns — hand it to whoever fills in orders and it comes back pre-formatted. <strong>Import CSV / Excel</strong> accepts either a .csv or a filled-in .xlsx and treats the file as the master copy: rows are matched by the hidden Order ID column when present, otherwise by Plan Number + Finished Product + PL Qty + Sales Order (spacing/capitalization differences don't matter). Matching rows are updated in place, rows in the file with no match are added as new orders, and — every time — any order currently in the system that isn't matched by a row in the file is deleted (including duplicate rows already in the system), so you end up with an exact copy of the file. You'll be asked to confirm before anything is deleted.
       </div>
       <div class="panel-body" style="padding:10px 18px 0 18px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
         <input type="text" id="prog-search" placeholder="Search SO, plan #, customer, item, or raw material…" value="${escAttr(progSearch)}" style="width:260px;">
@@ -1878,6 +2035,7 @@ function renderProgress(){
   $('#export-print').addEventListener('click', ()=> window.print());
   $('#export-csv').addEventListener('click', exportCSV);
   $('#export-pdf').addEventListener('click', exportPDF);
+  $('#export-template-btn').addEventListener('click', downloadOrderImportTemplate);
 
   const fileInput = $('#import-csv-input');
   $('#import-csv-btn').addEventListener('click', ()=> fileInput.click());
@@ -2071,7 +2229,7 @@ function machineBox(m){
   const hasError = state.errors.some(e=>e.machine===m.name);
   const workers = state.manpower.filter(p=>p.machineId===m.id);
   return `
-    <div class="machine ${job?'active':''} ${hasError?'has-error':''} ${workers.length?'staffed':''}" data-machine="${m.id}">
+    <div class="machine ${job?'active':''} ${hasError?'has-error':''} ${workers.length?'staffed':''} ${m.dispatch?'dispatch-tile':''}" data-machine="${m.id}">
       <div class="machine-name">${m.name}</div>
       ${workers.map(p=>`
         <div class="machine-worker" draggable="true" data-worker="${p.id}">
@@ -2089,7 +2247,9 @@ function machineBox(m){
             <button class="act-unassign" data-unassign="${job.id}" title="Send back to the Order Queue">↩ Unassign</button>
             <button class="act-delete" data-delete="${job.id}" title="Permanently delete this order">🗑 Delete</button>
           </div>
-        </div>` : (workers.length? '' : `<div class="machine-idle">Idle — drop an order here</div>`)}
+        </div>` : (workers.length? '' : (m.dispatch
+            ? `<div class="machine-idle">Drop an order here to send it straight to For Dispatch</div>`
+            : `<div class="machine-idle">Idle — drop an order here</div>`))}
     </div>`;
 }
 
@@ -2124,7 +2284,10 @@ function clearTapSelection(){
 function markTapTargets(){
   document.querySelectorAll('.machine').forEach(el=>el.classList.add('tap-target'));
   if(!tapSelection) return;
-  if(tapSelection.type==='order'){ const qp=$('#queue-panel'); if(qp) qp.classList.add('tap-target'); }
+  if(tapSelection.type==='order'){
+    const qp=$('#queue-panel'); if(qp) qp.classList.add('tap-target');
+    const dp=$('#dispatch-drop-panel'); if(dp) dp.classList.add('tap-target');
+  }
   if(tapSelection.type==='worker'){ const wqp=$('#worker-queue-panel'); if(wqp) wqp.classList.add('tap-target'); }
 }
 function selectForTap(el){
@@ -2209,6 +2372,25 @@ function wireMapDragAndTap(){
       clearTapSelection();
     });
   }
+  // dropping a job card onto Ready for Dispatch sends it straight to For
+  // Dispatch — pulling it off its machine, adding it to the Dispatch menu as
+  // Pending, and crediting the produced qty to inventory (see setOrderStatus).
+  const dispatchDropPanel = $('#dispatch-drop-panel');
+  if(dispatchDropPanel){
+    dispatchDropPanel.addEventListener('dragover', e=>{ e.preventDefault(); dispatchDropPanel.classList.add('drag-over'); });
+    dispatchDropPanel.addEventListener('dragleave', ()=> dispatchDropPanel.classList.remove('drag-over'));
+    dispatchDropPanel.addEventListener('drop', e=>{
+      e.preventDefault();
+      dispatchDropPanel.classList.remove('drag-over');
+      const raw = e.dataTransfer.getData('text/plain');
+      if(raw && raw.startsWith('order:')) setOrderStatus(raw.slice(6), 'for-dispatch');
+    });
+    dispatchDropPanel.addEventListener('click', ()=>{
+      if(!tapSelection || tapSelection.type!=='order') return;
+      setOrderStatus(tapSelection.id, 'for-dispatch');
+      clearTapSelection();
+    });
+  }
 }
 
 function renderMap(){
@@ -2246,6 +2428,13 @@ function renderMap(){
               <div class="item">${escHtml(p.name)}</div>
               <div class="meta">${MANPOWER_TYPES[p.type]||p.type} · ${p.startTime||'--:--'}–${p.endTime||'--:--'}</div>
             </div>`).join('') : '<div class="empty-hint">Every worker is assigned to a machine.</div>'}
+        </div>
+      </div>
+
+      <div class="panel" id="dispatch-drop-panel">
+        <div class="panel-head"><h2>Ready for Dispatch</h2></div>
+        <div class="panel-body">
+          <div class="empty-hint">Drag a job here (or tap it, then tap here) to move it to For Dispatch — it'll be added to the Dispatch menu as Pending and its produced qty added to inventory.</div>
         </div>
       </div>
       </div>
@@ -2348,6 +2537,8 @@ function syncOrderFromDispatch(d){
     if(!o.endDate) o.endDate = d.date || todayISO();
   }else if(o.status==='completed'){
     o.status = 'for-dispatch';
+    const dm = dispatchMachine();
+    o.machineId = dm ? dm.id : null;
   }else{
     return null;
   }
